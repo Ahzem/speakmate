@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Message } from '@/types/chat';
 import { parseAiResponse } from '@/lib/parser';
+import { useMounted } from '@/lib/useMounted';
 
 interface ChatMessageItemProps {
   message: Message;
@@ -13,25 +14,17 @@ export function ChatMessageItem({ message, onRetry }: ChatMessageItemProps) {
   const isUser = message.role === 'user';
   const [copied, setCopied] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
-  const [canSpeak, setCanSpeak] = useState(false);
-  const [formattedTime, setFormattedTime] = useState<string>('');
+  const isMounted = useMounted();
 
   const parsed = !isUser ? parseAiResponse(message.content) : null;
-
-  useEffect(() => {
-    // Only access browser APIs after mount to avoid hydration mismatch
-    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-      setCanSpeak(true);
-    }
-    if (message.timestamp) {
-      setFormattedTime(
-        new Date(message.timestamp).toLocaleTimeString([], {
+  const canSpeak = isMounted && typeof window !== 'undefined' && 'speechSynthesis' in window;
+  const formattedTime =
+    isMounted && message.timestamp > 0
+      ? new Date(message.timestamp).toLocaleTimeString([], {
           hour: '2-digit',
           minute: '2-digit',
         })
-      );
-    }
-  }, [message.timestamp]);
+      : '';
 
   const handleCopy = async () => {
     try {
